@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ed-Fi DMS: Breaking Free from Direct Database Access</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-csharp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+        
+        .slide {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+            scroll-snap-align: start;
+        }
+        
+        .slide-content {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #764ba2;
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        h2 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: #764ba2;
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem 0;
+            font-weight: 600;
+        }
+        
+        p {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+            color: #555;
+        }
+        
+        ul {
+            margin: 1.5rem 0;
+            padding-left: 2rem;
+        }
+        
+        li {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            margin-bottom: 0.8rem;
+            color: #555;
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+        
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .benefit-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .benefit-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .benefit-card h4 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .benefit-card p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+        }
+        
+        pre[class*="language-"] {
+            border-radius: 10px;
+            margin: 1.5rem 0;
+            font-size: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        code {
+            background: #f0f0f0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            color: #e83e8c;
+        }
+        
+        .mermaid {
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.2rem;
+            text-align: left;
+            font-size: 1.2rem;
+        }
+        
+        .comparison-table td {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 1.1rem;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .nav-buttons {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+        
+        .nav-button {
+            background: white;
+            color: #764ba2;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .nav-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .emoji-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .performance-metric {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+        
+        .metric-label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #28a745;
+        }
+        
+        .quote-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            font-size: 1.3rem;
+            font-style: italic;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+            z-index: -1;
+        }
+        
+        .timeline-item {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-phase {
+            color: #667eea;
+            font-size: 0.9rem;
+        }
+        
+        .timeline-time {
+            color: #764ba2;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide">
+        <div class="slide-content">
+            <h1>Breaking Free from Direct Database Access</h1>
+            <p style="text-align: center; font-size: 1.8rem; color: #667eea; font-weight: 600;">
+                A Two-Pronged Strategy: Relational Flattening + Purpose-Built Tooling
+            </p>
+            <div class="quote-box">
+                "Make everything as simple as possible, but not simpler."
+                <br>- Albert Einstein
+            </div>
+            <p style="text-align: center; margin-top: 2rem;">
+                <strong>Project Tanager</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 2: The Real Challenge -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>The Real Challenge: Getting Beyond Direct Database Access</h2>
+            
+            <h3>What Customers Say They Need</h3>
+            <ul>
+                <li>📊 Direct relational database access for queries and BI tools</li>
+                <li>🔗 Integration with legacy ETL pipelines</li>
+                <li>⚙️ Ability to perform "custom" operations they've always done</li>
+                <li>🎯 Direct manipulation of underlying data structures</li>
+                <li>⚡ Bypass API "limitations" for performance</li>
+            </ul>
+            
+            <h3>What They're Actually Doing</h3>
+            <ul>
+                <li>❌ Writing code that depends on ODS table structures</li>
+                <li>❌ Direct SQL updates that bypass business rules</li>
+                <li>❌ Hard-coding assumptions about internal IDs and keys</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Slide 3: The Deeper Problem -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>The Deeper Problem</h2>
+            
+            <div class="quote-box">
+                "Our hands are tied by their approach"
+            </div>
+            
+            <div class="benefit-grid">
+                <div class="benefit-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);">
+                    <div class="emoji-icon">🔒</div>
+                    <h4>Tight Coupling</h4>
+                    <p>They've become tightly coupled to implementation details</p>
+                </div>
+                <div class="benefit-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);">
+                    <div class="emoji-icon">💸</div>
+                    <h4>Technical Debt</h4>
+                    <p>Each "workaround" creates more technical debt</p>
+                </div>
+                <div class="benefit-card" style="background: linear-gradient(135deg, #ff6b6b 0%, #c44569 100%);">
+                    <div class="emoji-icon">💔</div>
+                    <h4>Brittle Systems</h4>
+                    <p>Changes to the underlying system break their customizations</p>
+                </div>
+            </div>
+            
+            <h3>Our Strategic Response</h3>
+            <ul>
+                <li>🎯 <strong>Identify</strong> the actual use case behind each low-level requirement</li>
+                <li>🛠️ <strong>Provide</strong> proper design and tooling to accomplish the real goal</li>
+                <li>📚 <strong>Educate</strong> on best practices while providing migration paths</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Slide 4: The Path Forward -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>The Path Forward</h2>
+            
+            <div class="timeline">
+                <div class="timeline-item">
+                    <span class="timeline-phase">Step 1</span>
+                    <span class="timeline-time">Flattening</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Step 2</span>
+                    <span class="timeline-time">Tooling</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Step 3</span>
+                    <span class="timeline-time">Contracts</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Step 4</span>
+                    <span class="timeline-time">Migration</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <h3>Our Solution Strategy</h3>
+                <ul>
+                    <li>✅ <strong>Relational flattening</strong> addresses legitimate BI/query needs</li>
+                    <li>✅ <strong>Tooling</strong> will replace other direct DB access patterns</li>
+                    <li>✅ <strong>Clear contracts</strong> about what's supported vs. what's internal</li>
+                    <li>✅ <strong>Gradual migration</strong> from implementation-dependent to feature-based solutions</li>
+                </ul>
+            </div>
+            
+            <p style="text-align: center; margin-top: 2rem; font-size: 1.3rem;">
+                <span class="highlight">We must break the cycle of implementation dependency</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 5: The Solution -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Our Two-Pronged Solution</h2>
+            <p style="font-size: 1.5rem; text-align: center; margin-bottom: 2rem;">
+                <span class="highlight">Address legitimate needs while breaking implementation dependency</span>
+            </p>
+            
+            <div class="mermaid">
+graph LR
+    subgraph "Before"
+        J[JSON Document] --> E[EdfiDoc Column]
+    end
+    
+    subgraph "After"
+        J2[JSON Document] --> F[Flattened Tables]
+        F --> S[Student Table]
+        F --> SA[StudentAddress]
+        F --> SR[StudentRace]
+    end
+    
+    style J fill:#ff6b6b,stroke:#333,stroke-width:2px
+    style J2 fill:#ff6b6b,stroke:#333,stroke-width:2px
+    style E fill:#faa,stroke:#333,stroke-width:2px
+    style F fill:#9f9,stroke:#333,stroke-width:2px
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 15px;">
+                    <h3 style="color: white; text-align: center;">1. Relational Flattening</h3>
+                    <ul style="margin-top: 1rem;">
+                        <li style="color: white;">First-class relational tables</li>
+                        <li style="color: white;">Direct SQL access for BI tools</li>
+                        <li style="color: white;">Optimized for analytics</li>
+                        <li style="color: white;">Preserves existing validation</li>
+                    </ul>
+                </div>
+                <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 2rem; border-radius: 15px;">
+                    <h3 style="color: white; text-align: center;">2. Purpose-Built Tooling</h3>
+                    <ul style="margin-top: 1rem;">
+                        <li style="color: white;">Field-level updates</li>
+                        <li style="color: white;">High-speed bulk loading</li>
+                        <li style="color: white;">Administrative operations</li>
+                        <li style="color: white;">Safety rails and auditing</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <p style="text-align: center; font-size: 1.3rem; margin-top: 2rem;">
+                <strong>Together, these eliminate the need for direct database manipulation</strong>
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 6: Three-Table Design with Flattening -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Solution Part 1: Relational Flattening Architecture</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+                <div>
+                    <h3 style="color: #667eea;">Three-Table Design (Unchanged)</h3>
+                    <pre><code class="language-sql">-- Core validation and reference tables
+CREATE TABLE Documents (
+    Id BIGINT PRIMARY KEY,
+    DocumentPartitionKey TINYINT,
+    DocumentUuid UUID UNIQUE,
+    ProjectName VARCHAR(100),
+    ResourceName VARCHAR(100),
+    ResourceVersion VARCHAR(20)
+);
+
+CREATE TABLE References (
+    Id BIGINT PRIMARY KEY,
+    ParentDocumentPartitionKey TINYINT,
+    ParentDocumentId BIGINT,
+    ReferencedDocumentId BIGINT,
+    ReferentialId UUID,
+    FOREIGN KEY (ParentDocumentId) 
+        REFERENCES Documents(Id),
+    FOREIGN KEY (ReferentialId) 
+        REFERENCES Aliases(ReferentialId)
+);
+
+CREATE TABLE Aliases (
+    Id BIGINT PRIMARY KEY,
+    ReferentialId UUID UNIQUE,
+    ReferentialPartitionKey TINYINT,
+    DocumentId BIGINT,
+    DocumentPartitionKey TINYINT,
+    FOREIGN KEY (DocumentId) 
+        REFERENCES Documents(Id)
+);</code></pre>
+                </div>
+                <div>
+                    <h3 style="color: #28a745;">Flattened Student Tables (New)</h3>
+                    <pre><code class="language-sql">-- Relational access tables
+CREATE TABLE Student (
+    Id BIGINT PRIMARY KEY IDENTITY,
+    DocumentUuid UUID NOT NULL,
+    DocumentPartitionKey TINYINT NOT NULL,
+    StudentUniqueId VARCHAR(100) NOT NULL,
+    FirstName VARCHAR(100),
+    LastSurname VARCHAR(100),
+    BirthDate DATE,
+    CONSTRAINT UQ_StudentUniqueId 
+        UNIQUE (StudentUniqueId),
+    CONSTRAINT FK_Student_Documents 
+        FOREIGN KEY (DocumentUuid, DocumentPartitionKey)
+        REFERENCES Documents(DocumentUuid, DocumentPartitionKey)
+);
+
+CREATE TABLE StudentAddress (
+    Id BIGINT PRIMARY KEY IDENTITY,
+    Student_Id BIGINT NOT NULL,
+    DocumentUuid UUID NOT NULL,
+    DocumentPartitionKey TINYINT NOT NULL,
+    AddressTypeDescriptor VARCHAR(100),
+    City VARCHAR(100),
+    StateAbbreviation CHAR(2),
+    CONSTRAINT UQ_AddressType 
+        UNIQUE (AddressTypeDescriptor),
+    CONSTRAINT FK_StudentAddress_Student 
+        FOREIGN KEY (Student_Id) REFERENCES Student(Id)
+);
+
+CREATE TABLE StudentRace (
+    Id BIGINT PRIMARY KEY IDENTITY,
+    Student_Id BIGINT NOT NULL,
+    DocumentUuid UUID NOT NULL,
+    DocumentPartitionKey TINYINT NOT NULL,
+    RaceDescriptor VARCHAR(100),
+    CONSTRAINT FK_StudentRace_Student 
+        FOREIGN KEY (Student_Id) REFERENCES Student(Id)
+);</code></pre>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 1.5rem;">
+                <strong>Three-table design</strong> handles references and validation • 
+                <strong>Flattened tables</strong> provide relational access
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 7: Architecture Overview -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Architectural Elegance</h2>
+            <p>The three-table design <strong>remains unchanged</strong> for reference validation:</p>
+            
+            <div class="mermaid">
+graph TB
+    subgraph "Reference Validation Layer (Unchanged)"
+        D[Documents]
+        R[References]
+        A[Aliases]
+        R --> D
+        R --> A
+        A --> D
+    end
+    
+    subgraph "New Relational Layer"
+        S[Student]
+        SA[StudentAddress]
+        SR[StudentRace]
+        SA --> S
+        SR --> S
+    end
+    
+    S -.-> D
+    SA -.-> D
+    SR -.-> D
+    
+    style D fill:#667eea,color:#fff
+    style R fill:#667eea,color:#fff
+    style A fill:#667eea,color:#fff
+    style S fill:#28a745,color:#fff
+    style SA fill:#28a745,color:#fff
+    style SR fill:#28a745,color:#fff
+            </div>
+            
+            <h3>Key Design Decisions (Flattening)</h3>
+            <ul>
+                <li>✅ <strong>Surrogate keys</strong> for simplicity (BIGINT IDENTITY)</li>
+                <li>✅ <strong>Intra-resource FKs only</strong> (Flattened tables relate to each other)</li>
+                <li>✅ <strong>No cross-resource FKs</strong> (References table handles that)</li>
+                <li>✅ <strong>Each table links to Documents</strong> for traceability</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide 8: Table Design Example -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Clean Table Design</h2>
+            <p>Example: Student resource flattening</p>
+            
+            <h3>Root Entity Table</h3>
+            <pre><code class="language-sql">CREATE TABLE Student (
+    Id BIGINT PRIMARY KEY IDENTITY(1,1),          -- Simple surrogate key
+    DocumentUuid UUID NOT NULL,                   -- Link to Documents
+    DocumentPartitionKey TINYINT NOT NULL,        -- Partition key
+    StudentUniqueId VARCHAR(100) NOT NULL,
+    FirstName VARCHAR(100) NOT NULL,
+    LastSurname VARCHAR(100) NOT NULL,
+    BirthDate DATE,
+    -- Flattened nested objects
+    Demographics_HispanicLatinoEthnicity BIT,
+    Demographics_Sex VARCHAR(20),
+    ContactInfo_Email VARCHAR(255),
+    CONSTRAINT FK_Student_Documents 
+        FOREIGN KEY (DocumentUuid, DocumentPartitionKey) 
+        REFERENCES Documents(DocumentUuid, DocumentPartitionKey),
+    CONSTRAINT UQ_Student_StudentUniqueId UNIQUE (StudentUniqueId)
+);</code></pre>
+
+            <h3>Child Array Table</h3>
+            <pre><code class="language-sql">CREATE TABLE StudentAddress (
+    Id BIGINT PRIMARY KEY IDENTITY(1,1),
+    Student_Id BIGINT NOT NULL,      -- Example FK column name, actual will avoid possible name collisions
+    DocumentUuid UUID NOT NULL,      -- Document traceability
+    DocumentPartitionKey TINYINT NOT NULL,
+    AddressTypeDescriptor VARCHAR(100),
+    StreetNumberName VARCHAR(255),
+    City VARCHAR(100),
+    StateAbbreviation CHAR(2),
+    CONSTRAINT FK_StudentAddress_Student 
+        FOREIGN KEY (Student_Id) REFERENCES Student(Id),
+    CONSTRAINT UQ_StudentAddress_Type 
+        UNIQUE (AddressTypeDescriptor)
+);</code></pre>
+            
+            <p style="margin-top: 2rem; font-size: 1.4rem;">
+                <strong>Notice:</strong> No complex natural keys, no cross-resource FKs, just <span class="highlight">simple surrogate keys</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 9: Flattening Approaches -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Two Flattening Approaches</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h3 style="color: #667eea;">Application-Side (C#)</h3>
+                    <pre><code class="language-csharp">// Parse JSON and insert directly
+var json = JObject.Parse(jsonDocument);
+
+// Extract and insert root entity
+var studentId = await connection.QuerySingleAsync&lt;long&gt;(@"
+    INSERT INTO Student (...) 
+    VALUES (@StudentUniqueId, ...)
+    RETURNING Id",
+    new { 
+        StudentUniqueId = json["studentUniqueId"],
+        FirstName = json["firstName"]
+    });
+
+// Process child arrays
+foreach (var addr in json["addresses"])
+{
+    await connection.ExecuteAsync(
+        "INSERT INTO StudentAddress ...",
+        new { StudentId = studentId, ... });
+}</code></pre>
+                </div>
+                <div>
+                    <h3 style="color: #28a745;">Database-Side (PostgreSQL)</h3>
+                    <pre><code class="language-sql">-- Use native JSON functions
+CREATE FUNCTION import_json_document(
+    p_json_payload JSONB
+) RETURNS INTEGER AS $$
+BEGIN
+    -- Direct JSON to table mapping
+    INSERT INTO Student 
+    SELECT * FROM jsonb_populate_record(
+        null::Student,
+        p_json_payload->>'student'
+    );
+    
+    -- Handle arrays efficiently
+    INSERT INTO StudentAddress
+    SELECT * FROM jsonb_populate_recordset(
+        null::StudentAddress,
+        p_json_payload->'addresses'
+    );
+    
+    RETURN 1;
+END;
+$$ LANGUAGE plpgsql;</code></pre>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 1rem; font-size: 1.2rem;">
+                <strong>Choose based on:</strong> Performance needs • Database capabilities • Team expertise
+            </p>
+        </div>
+    </div>
+
+    <!-- Slide 10: Metadata-Driven Architecture -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Metadata-Driven JSON Flattening</h2>
+            
+            <h3>Metadata Schema Defines Everything</h3>
+            <pre><code class="language-json">{
+  "documentType": "Student",
+  "entities": [{
+    "tableName": "Student",
+    "jsonPath": "$.student",
+    "properties": [
+      {
+        "columnName": "StudentUniqueId",
+        "dataType": "VARCHAR(100)",
+        "jsonPath": "$.studentUniqueId",
+        "isPrimaryKey": true
+      },
+      {
+        "columnName": "Demographics_Sex",
+        "dataType": "VARCHAR(20)",
+        "jsonPath": "$.demographics.sex"  // Nested object
+      }
+    ]
+  }, {
+    "tableName": "StudentAddress",
+    "jsonPath": "$.student.addresses",  // Array of objects
+    "relationships": [{
+      "parentTable": "Student",
+      "foreignKeyColumn": "Student_Id"
+    }]
+  }]
+}</code></pre>
+            
+            <h3>PostgreSQL JSON Generation</h3>
+            <pre><code class="language-sql">-- Database reconstructs JSON using metadata
+CREATE FUNCTION get_student_json(p_student_id TEXT)
+RETURNS JSON AS $$
+    SELECT json_build_object(
+        'studentUniqueId', s.student_unique_id,
+        'firstName', s.first_name,
+        'demographics', json_build_object(
+            'sex', s.demographics_sex
+        ),
+        'addresses', (
+            SELECT json_agg(json_build_object(
+                'city', sa.city,
+                'stateAbbreviation', sa.state_abbreviation
+            ))
+            FROM student_address sa
+            WHERE sa.student_id = s.id
+        )
+    )
+    FROM student s WHERE s.id = p_student_id;
+$$ LANGUAGE sql;</code></pre>
+        </div>
+    </div>
+
+    <!-- Slide 11: Relational to JSON -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Lightning-Fast JSON Reconstruction</h2>
+            <p>Leverage modern database JSON capabilities for the read path:</p>
+            
+            <h3>SQL Server FOR JSON</h3>
+            <pre><code class="language-sql">CREATE PROCEDURE GetStudentJson
+    @DocumentUuid UUID,
+    @DocumentPartitionKey TINYINT
+AS
+SELECT
+    s.StudentUniqueId AS 'studentUniqueId',
+    s.FirstName AS 'firstName',
+    s.LastSurname AS 'lastSurname',
+    
+    -- Nested demographics object
+    JSON_QUERY((
+        SELECT
+            s.Demographics_HispanicLatinoEthnicity AS 'hispanicLatinoEthnicity',
+            s.Demographics_Sex AS 'sex'
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+    )) AS 'demographics',
+    
+    -- Addresses array
+    (SELECT
+        AddressTypeDescriptor AS 'addressTypeDescriptor',
+        City AS 'city',
+        StateAbbreviation AS 'stateAbbreviation'
+     FROM StudentAddress sa
+     WHERE sa.Student_Id = s.Id
+     FOR JSON PATH) AS 'addresses'
+     
+FROM Student s
+WHERE s.DocumentUuid = @DocumentUuid 
+  AND s.DocumentPartitionKey = @DocumentPartitionKey
+FOR JSON PATH, WITHOUT_ARRAY_WRAPPER</code></pre>
+
+            <div class="performance-metric">
+                <span class="metric-label">JSON Generation Speed:</span>
+                <span class="metric-value">&lt; 5ms</span>
+            </div>
+            
+            <p>The database does the heavy lifting - <span class="highlight">no application-side JSON assembly needed!</span></p>
+        </div>
+    </div>
+
+    <!-- Slide 11: Performance Benefits -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Performance Benefits</h2>
+            
+            <h3>Why It's Fast</h3>
+            <ul>
+                <li>📍 <strong>Native indexes</strong> on relational columns</li>
+                <li>⚡ <strong>No JSON parsing</strong> for queries</li>
+                <li>🔄 <strong>Efficient JOINs</strong> with surrogate keys</li>
+                <li>💾 <strong>Better query plan caching</strong></li>
+                <li>🚀 <strong>Direct SQL access</strong> for BI tools</li>
+                <li>⚙️ <strong>Optimized for analytics</strong> workloads</li>
+            </ul>
+            
+            <h3>Key Performance Gains</h3>
+            <ul>
+                <li>✅ Orders of magnitude faster for analytical queries</li>
+                <li>✅ Direct integration with existing BI infrastructure</li>
+                <li>✅ Reduced CPU and memory usage for complex queries</li>
+                <li>✅ Better concurrent query performance</li>
+            </ul>
+            
+            <div class="quote-box">
+                "Simplicity is the ultimate sophistication."
+                <br>- Leonardo da Vinci
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 12: Tooling for Direct Operations -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Solution Part 2: Purpose-Built Tooling</h2>
+            
+            <h3>The Requirements We're Addressing</h3>
+            <ul>
+                <li>⚡ Quick modification of a single field without full document updates</li>
+                <li>🚀 High-speed bulk data loading that bypasses API overhead</li>
+                <li>⏱️ Performance-critical operations during tight maintenance windows</li>
+            </ul>
+            
+            <h3>Examples of Tooling</h3>
+            <ul>
+                <li><strong>Field-level PATCH API</strong>: Update specific fields without sending entire documents (command line version as well)</li>
+                <li><strong>Batch field updates</strong>: Modify the same field across multiple records in one operation</li>
+                <li><strong>SQL-like update syntax</strong>: <code>UPDATE Student SET LastName = 'Smith' WHERE StudentUniqueId = '12345'</code></li>
+                <li><strong>Validation bypass mode</strong>: For trusted administrative corrections</li>
+            </ul>
+            
+            <div class="quote-box">
+                "Give them tools that do what they're trying to accomplish,<br>but do it safely and within the system's boundaries"
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 13: High-Performance Operations -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>High-Performance & Administrative Tools</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h3 style="color: #667eea;">High-Performance Bulk Loading</h3>
+                    <ul>
+                        <li><strong>Direct table writers</strong>: Controlled access to flattened tables for ETL operations</li>
+                        <li><strong>Streaming ingestion</strong>: Write-optimized endpoints that queue and batch operations</li>
+                        <li><strong>Bulk upsert operations</strong>: Handle thousands of records per second</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #764ba2;">Administrative Tooling</h3>
+                    <ul>
+                        <li><strong>Data correction console</strong>: UI for authorized single-field updates</li>
+                        <li><strong>Audit-logged direct access</strong>: Tracked and reversible direct modifications</li>
+                        <li><strong>Maintenance mode operations</strong>: Temporary relaxed constraints during migrations</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 2rem;">Safety Rails</h3>
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div class="emoji-icon">📝</div>
+                    <h4>Change Tracking</h4>
+                    <p>All direct operations logged and reversible</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">✅</div>
+                    <h4>Validation On-Demand</h4>
+                    <p>Re-validate after bulk operations</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">🔐</div>
+                    <h4>Role-Based Access</h4>
+                    <p>Only specific roles can use bypass tools</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">↩️</div>
+                    <h4>Automated Rollback</h4>
+                    <p>On validation failure after bulk operations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- Slide 15: Benefits Summary -->
+    <div class="slide">
+        <div class="slide-content">
+            <h2>Complete Solution Benefits</h2>
+            
+            <div class="benefit-grid">
+                <div class="benefit-card">
+                    <div class="emoji-icon">🎯</div>
+                    <h4>Addresses Real Needs</h4>
+                    <p>BI access + operational efficiency</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">🔒</div>
+                    <h4>Breaks Dependencies</h4>
+                    <p>No more direct table manipulation</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">🛡️</div>
+                    <h4>Maintains Integrity</h4>
+                    <p>All operations tracked and safe</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">⚡</div>
+                    <h4>Performance Gains</h4>
+                    <p>Orders of magnitude faster</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">🔄</div>
+                    <h4>Future Flexibility</h4>
+                    <p>Can evolve as ecosystem matures</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="emoji-icon">🆙</div>
+                    <h4>Clear Boundaries</h4>
+                    <p>Supported vs internal is explicit</p>
+                </div>
+            </div>
+            
+            <h3>Strategic Value</h3>
+            <ul>
+                <li>✅ <strong>Pragmatic:</strong> Solves today's problems without compromising tomorrow</li>
+                <li>✅ <strong>Reversible:</strong> Can evolve based on ecosystem maturity</li>
+                <li>✅ <strong>Educational:</strong> Learn what customers really need from direct DB access</li>
+            </ul>
+        </div>
+    </div>
+
+
+
+    <!-- Slide 16: Call to Action -->
+    <div class="slide">
+        <div class="slide-content">
+            <h1>A Complete Solution</h1>
+            
+            <div class="quote-box" style="font-size: 1.6rem;">
+                Relational Flattening + Purpose-Built Tooling =
+                <br>Freedom from Direct Database Dependency
+            </div>
+            
+            <h3>Our Journey</h3>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <span class="timeline-phase">Today</span>
+                    <span class="timeline-time">Approve</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Q1 2026</span>
+                    <span class="timeline-time">Deploy</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Q2-Q3</span>
+                    <span class="timeline-time">Learn</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">Q4 2026</span>
+                    <span class="timeline-time">Optimize</span>
+                </div>
+                <div class="timeline-item">
+                    <span class="timeline-phase">2027+</span>
+                    <span class="timeline-time">Evolve</span>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 3rem;">
+                <h3>The Bottom Line</h3>
+                <p style="font-size: 1.3rem;">We give customers what they need through proper abstractions,<br>not what they think they want through direct database access</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-buttons">
+        <button class="nav-button" onclick="previousSlide()">← Previous</button>
+        <button class="nav-button" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#764ba2',
+                lineColor: '#764ba2',
+                secondaryColor: '#f093fb',
+                tertiaryColor: '#28a745'
+            }
+        });
+        
+        // Slide navigation
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        
+        function showSlide(n) {
+            slides[currentSlide].style.display = 'none';
+            currentSlide = (n + slides.length) % slides.length;
+            slides[currentSlide].style.display = 'flex';
+            
+            // Reinitialize animations
+            const content = slides[currentSlide].querySelector('.slide-content');
+            content.style.animation = 'none';
+            setTimeout(() => {
+                content.style.animation = 'slideIn 0.6s ease-out';
+            }, 10);
+        }
+        
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+        
+        function previousSlide() {
+            showSlide(currentSlide - 1);
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') previousSlide();
+        });
+        
+        // Initialize first slide
+        slides.forEach((slide, index) => {
+            if (index !== 0) slide.style.display = 'none';
+        });
+        
+        // Touch/swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+        
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) nextSlide();
+            if (touchEndX > touchStartX + 50) previousSlide();
+        }
+    </script>
+</body>
+</html>
