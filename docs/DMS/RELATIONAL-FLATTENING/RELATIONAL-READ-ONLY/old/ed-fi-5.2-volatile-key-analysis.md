@@ -59,6 +59,7 @@ The following entities directly reference primary key updatable entities as part
 
 | Level | Chain | Impact |
 |-------|-------|--------|
+| 4 | Session → CourseOffering → Section → StudentSectionAssociation → Grade | Grade transitively depends on Session through multiple levels |
 | 2 | Session → CourseOffering → Section | Section transitively depends on Session |
 | 1 | StudentSectionAssociation → Grade | Grade directly depends on StudentSectionAssociation |
 | 1 | GradebookEntry → StudentGradebookEntry | Direct dependency only |
@@ -184,7 +185,7 @@ graph TD
 
 ## Key Findings
 
-1. **Limited Cascading Depth**: The maximum transitive dependency depth is only 2 levels (Session → CourseOffering → Section), indicating good architectural design that minimizes cascading complexity.
+1. **Moderate Cascading Depth**: The maximum transitive dependency depth is 4 levels (Session → CourseOffering → Section → StudentSectionAssociation → Grade), which requires careful consideration for cascading updates but is still manageable.
 
 2. **Session is Critical**: Session has the highest cascading impact, affecting the entire course offering and section structure, plus attendance tracking.
 
